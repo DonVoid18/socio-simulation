@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráfico de Barras desde Excel - Modo Oscuro</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #1e1e1e;
+        }
+        input[type="file"] {
+            color: #ffffff;
+            background-color: #333333;
+            border: 1px solid #444444;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="upload" />
+    <canvas id="myChart" width="400" height="200"></canvas>
+
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFile, false);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+
+                // Leer la primera hoja
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                // Procesar los datos agrupándolos por "Organización Política" y sumando los votos
+                const aggregatedData = {};
+                jsonData.forEach(item => {
+                    const orgPolitica = item['Organización Política'];
+                    const votos = item['Votos'];
+                    if (aggregatedData[orgPolitica]) {
+                        aggregatedData[orgPolitica] += votos;
+                    } else {
+                        aggregatedData[orgPolitica] = votos;
+                    }
+                });
+
+                // Convertir los datos agregados en arrays para Chart.js
+                const labels = Object.keys(aggregatedData);
+                const votes = Object.values(aggregatedData);
+
+                // Crear el gráfico
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '# de Votos',
+                            data: votes,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#ffffff'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#ffffff'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#ffffff'
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>

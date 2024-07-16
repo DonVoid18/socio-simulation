@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráficos de Electores</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Gráficos de Electores</h1>
+    <input type="file" id="upload" accept=".xlsx">
+    <h2>Porcentaje de Jóvenes Electores</h2>
+    <canvas id="youngVotersChart" width="400" height="200"></canvas>
+    <h2>Porcentaje de Electores Mayores de 70 años</h2>
+    <canvas id="oldVotersChart" width="400" height="200"></canvas>
+    <h2>Porcentaje de Electores Intermedios</h2>
+    <canvas id="intermediateVotersChart" width="400" height="200"></canvas>
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFile, false);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                processData(jsonData);
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processData(data) {
+            const distritos = [];
+            const youngVoters = [];
+            const oldVoters = [];
+            const intermediateVoters = [];
+
+            data.slice(1).forEach(row => {
+                const [región, provincia, distrito, totalElectores, electoresVarones, pctElectoresVarones, electoresMujeres, pctElectoresMujeres, electoresJóvenes, pctElectoresJóvenes, electoresMayores70, pctElectoresMayores70] = row;
+                
+                distritos.push(distrito);
+                youngVoters.push((electoresJóvenes / totalElectores) * 100);
+                oldVoters.push((electoresMayores70 / totalElectores) * 100);
+                intermediateVoters.push(((totalElectores - electoresJóvenes - electoresMayores70) / totalElectores) * 100);
+            });
+
+            createChart('youngVotersChart', 'Porcentaje de Jóvenes Electores', distritos, youngVoters, 'skyblue');
+            createChart('oldVotersChart', 'Porcentaje de Electores Mayores de 70 años', distritos, oldVoters, 'orange');
+            createChart('intermediateVotersChart', 'Porcentaje de Electores Intermedios', distritos, intermediateVoters, 'green');
+        }
+
+        function createChart(canvasId, title, labels, data, color) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: title,
+                        data: data,
+                        backgroundColor: color,
+                        borderColor: color,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + "%";
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

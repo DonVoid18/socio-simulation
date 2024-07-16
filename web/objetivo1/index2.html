@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Datos - Modo Oscuro</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #1e1e1e;
+        }
+        input[type="file"] {
+            color: #ffffff;
+            background-color: #333333;
+            border: 1px solid #444444;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="upload" />
+    <canvas id="chart1" width="400" height="200"></canvas>
+    <canvas id="chart2" width="400" height="200"></canvas>
+    <!-- Puedes agregar más canvas para más gráficas -->
+
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFile, false);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+
+                // Leer la primera hoja
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                // Procesar y crear gráficas
+                crearGrafico1(jsonData);
+                crearGrafico2(jsonData);
+                // Puedes agregar más funciones para diferentes gráficas
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function crearGrafico1(data) {
+            // Ejemplo de procesamiento de datos para la primera gráfica
+            const aggregatedData = {};
+            data.forEach(item => {
+                const orgPolitica = item['Organización Política'];
+                const votos = item['Votos'];
+                if (aggregatedData[orgPolitica]) {
+                    aggregatedData[orgPolitica] += votos;
+                } else {
+                    aggregatedData[orgPolitica] = votos;
+                }
+            });
+
+            const labels = Object.keys(aggregatedData);
+            const votes = Object.values(aggregatedData);
+
+            const ctx = document.getElementById('chart1').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '# de Votos',
+                        data: votes,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function crearGrafico2(data) {
+            // Ejemplo de procesamiento de datos para la segunda gráfica
+            const participacionPorRegion = {};
+            data.forEach(item => {
+                const region = item['Región'];
+                const participacion = item['% Participación'] * 100; // Convertir a porcentaje
+                if (participacionPorRegion[region]) {
+                    participacionPorRegion[region].push(participacion);
+                } else {
+                    participacionPorRegion[region] = [participacion];
+                }
+            });
+
+            const labels = Object.keys(participacionPorRegion);
+            const participaciones = labels.map(region => {
+                const participaciones = participacionPorRegion[region];
+                const suma = participaciones.reduce((a, b) => a + b, 0);
+                return suma / participaciones.length;
+            });
+
+            const ctx = document.getElementById('chart2').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '% Participación Promedio',
+                        data: participaciones,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

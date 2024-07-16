@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Participación Electoral</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #1e1e1e;
+        }
+        input[type="file"] {
+            color: #ffffff;
+            background-color: #333333;
+            border: 1px solid #444444;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="upload" />
+    <canvas id="totalVotantesChart" width="400" height="200"></canvas>
+    <canvas id="participacionChart" width="400" height="200"></canvas>
+
+    <script>
+        document.getElementById('upload').addEventListener('change', handleFile, false);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+
+                // Leer la primera hoja
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                // Procesar y crear gráficas
+                crearGraficoTotalVotantes(jsonData);
+                crearGraficoParticipacion(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function crearGraficoTotalVotantes(data) {
+            const regiones = {};
+            data.forEach(item => {
+                const region = item['Región'];
+                const electores = item['Electores'];
+                if (regiones[region]) {
+                    regiones[region] += electores;
+                } else {
+                    regiones[region] = electores;
+                }
+            });
+
+            const labels = Object.keys(regiones);
+            const totalElectores = Object.values(regiones);
+
+            const ctx = document.getElementById('totalVotantesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total de Electores',
+                        data: totalElectores,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function crearGraficoParticipacion(data) {
+            const participacionPorRegion = {};
+            data.forEach(item => {
+                const region = item['Región'];
+                const participacion = item['% Participación'] * 100; // Convertir a porcentaje
+                if (participacionPorRegion[region]) {
+                    participacionPorRegion[region].push(participacion);
+                } else {
+                    participacionPorRegion[region] = [participacion];
+                }
+            });
+
+            const labels = Object.keys(participacionPorRegion);
+            const participaciones = labels.map(region => {
+                const participaciones = participacionPorRegion[region];
+                const suma = participaciones.reduce((a, b) => a + b, 0);
+                return suma / participaciones.length;
+            });
+
+            const ctx = document.getElementById('participacionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tasa de Participación (%)',
+                        data: participaciones,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
